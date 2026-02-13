@@ -9,9 +9,19 @@ This MVP backend covers only:
 
 Auth users are in `auth.users`, and `profiles.id` maps 1:1 to `auth.users.id`.
 
-## Migration
-Initial schema and RLS are in:
-- `supabase/migrations/0001_init.sql`
+## Migrations
+Current schema/policy/auth setup is composed from:
+- `supabase/migrations/0001_init.sql` (base schema + RLS)
+- `supabase/migrations/0002_public_views.sql`
+- `supabase/migrations/0003_public_views_security_invoker.sql`
+- `supabase/migrations/0004_fix_anon_column_grants.sql`
+- `supabase/migrations/0005_storage_mygarage_policies.sql`
+- `supabase/migrations/0006_durable_rate_limit.sql`
+- `supabase/migrations/0007_reorder_minimal_swap.sql`
+- `supabase/migrations/0008_least_privilege_anon_and_storage_hardening.sql`
+- `supabase/migrations/0009_fix_rate_limit_consume_ambiguous_window_ends_at.sql`
+- `supabase/migrations/0010_create_profile_on_signup.sql`
+- `supabase/migrations/0011_generate_username_on_signup.sql`
 
 Highlights:
 - UUID primary keys
@@ -32,10 +42,14 @@ Highlights:
 Owner checks are enforced by RLS policies in SQL, not by application-side ownership logic.
 
 ## Storage path conventions
-No storage policies are included yet. The app should write paths following:
+The app writes paths following:
 - `avatars/{profile_id}/{uuid}.jpg`
 - `vehicles/{vehicle_id}/{uuid}.jpg`
 - `mods/{mod_id}/{uuid}.jpg`
+
+Storage policies are defined and hardened by:
+- `supabase/migrations/0005_storage_mygarage_policies.sql`
+- `supabase/migrations/0008_least_privilege_anon_and_storage_hardening.sql`
 
 ## Query utilities
 Typed query helpers live in:
@@ -64,6 +78,26 @@ Notes:
   - `public.rate_limit_buckets`
   - `public.rate_limit_consume(...)` (atomic fixed-window consume)
   - `public.rate_limit_cleanup_expired(...)` (cheap periodic cleanup)
+
+## Profile Provisioning
+- New auth users get a profile row via trigger:
+  - `on_auth_user_created` on `auth.users`
+  - Function: `public.handle_new_user()`
+- Trigger behavior is idempotent (`on conflict (id) do nothing`) and uses `security definer` with fixed `search_path`.
+- Username provisioning:
+  - `public.derive_username_from_email(...)` derives a valid username from email local-part.
+  - Trigger retries with deterministic suffix on unique collision.
+  - Final fallback remains `NULL` username only if needed.
+- App-level race fallback:
+  - `src/lib/auth/ensure-profile.ts` upserts-by-id then re-selects.
+  - Used by dashboard layout/actions/pages to self-heal legacy or race paths.
+
+## Dashboard Auth Gate
+- Middleware is the primary gate for `/dashboard`:
+  - `src/middleware.ts`
+- It validates session once and sets `x-mygarage-dashboard-user-id`.
+- Server components/actions use this header-based flow through:
+  - `src/lib/auth/dashboard-request.ts`
 
 ## Auth Start Hardening
 - Login initiation moved server-side to:
