@@ -70,6 +70,49 @@ web_modules/
 .env.*
 !.env.example
 
+# Supabase CLI local state (can include project refs, URLs, and local metadata)
+supabase/.temp/
+
+# Deployment / hosting metadata (often contains environment or auth info)
+.vercel/
+.netlify/
+
+# Credentials / key material (never commit)
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+*.der
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Cloud/provider credential dumps
+*credentials*.json
+service-account*.json
+firebase-adminsdk*.json
+
+# Package manager auth files
+.npmrc
+!.npmrc.example
+.yarnrc
+.yarnrc.yml
+!.yarnrc.example
+!.yarnrc.yml.example
+
+# Local databases / dumps (can contain user data, tokens, sessions)
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.db
+*.dump
+*.sql.gz
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
